@@ -112,8 +112,10 @@ public:
     }
 };
 
-class Modem : QObject
+class Modem : public QObject
 {
+    //Q_OBJECT
+
     QAudioDeviceInfo m_device;
     QAudioFormat m_format;
     Modulator * modulator;
@@ -124,7 +126,7 @@ public:
     {
         m_device = QAudioDeviceInfo::availableDevices(QAudio::AudioOutput)[0];
 
-        m_format.setSampleRate(42000);
+        m_format.setSampleRate(44100);
         m_format.setChannelCount(1);
         m_format.setSampleSize(8);
         m_format.setCodec("audio/pcm");
@@ -137,18 +139,20 @@ public:
     void emitSignal(QByteArray * input)
     {
         QByteArray ba(*input);
-        scramble(ba);
+        //scramble(ba);
         //std::cout << "======" << std::endl;
         //std::cout << "scrambled:" << std::endl;
         //printBa(input);
 
-        wrap(ba);
+        //wrap(ba);
         //std::cout << "======" << std::endl;
         //std::cout << "wrapped:" << std::endl;
         //printBa(input);
 
         QByteArray * result = modulator->Modulate(ba);
 
+        std::cout << "result:" << std::endl;
+        printBa(*result);
         m_audioOutputIODevice.close();
         m_audioOutputIODevice.setBuffer(result);
         m_audioOutputIODevice.open(QIODevice::ReadOnly);
@@ -176,8 +180,8 @@ int main(int argc, char *argv[])
     std::cout << "======" << std::endl;
 */
 
-    Modem m = Modem(1000,2000,1.0/8.0);
-    m.emitSignal(&input);
+    Modem * m = new Modem(1400,2100,0.01);
+    m->emitSignal(&input);
 
     return a.exec();
 }
