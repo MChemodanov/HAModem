@@ -9,11 +9,65 @@
 #include <iostream>
 #include <qDebug>
 
+#include <stdio.h>      /* printf, scanf, puts, NULL */
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
 
+int getBit(QByteArray & ba, int bit)
+{
+    if (bit < 0 || bit > ba.size()*8)
+        return 1;
+    else
+        return ba[bit/8] & (1 << bit%8) ? 1: 0;
+}
+
+void setBit(QByteArray & ba, int bit, int value)
+{
+    if (value)
+        ba[bit/8] = ba[bit/8] | (1 << bit%8);
+    else
+        ba[bit/8] = ba[bit/8] & (~(1 << bit%8));
+}
+
+int state=0x0005;
+
+
+int scrambler(int h, int input){
+    int y, y2, y5;
+    y2 = (0x0008 & h) >> 3;
+        y5 = 0x0001 & h;
+    y= input ^ y2 ^ y5;
+    h = h >> 1;
+    y = y << 4;
+    state = h | y;
+        y = y>>4;
+    return y;
+
+}
+
+int descrambler(int h, int input){
+    int x, input2, input5;
+    input2 = (0x0008 & h) >> 3;
+        input5 = 0x0001 & h;
+    x= input ^ input2 ^ input5;
+    h = h >> 1;
+    x = x << 4;
+    state = h | x;
+        x = x>>4;
+    return x;
+
+}
 void scramble(QByteArray & ba)
 {
     for (int i=0; i< ba.size(); i++) {
-        ba[i] = ~ba[i];
+        ba[i] = (char)scrambler(state, ba[i]);
+    }
+}
+
+void descramble (QByteArray & ba)
+{
+    for (int i=0; i< ba.size(); i++) {
+        ba[i] = (char)descrambler(state, ba[i]);
     }
 }
 
@@ -139,26 +193,32 @@ public:
     void emitSignal(QByteArray * input)
     {
         QByteArray ba(*input);
-        //scramble(ba);
+        scramble(ba);
+        std::cout << "======" << std::endl;
+        std::cout << "scrambled:" << std::endl;
+        printBa(ba);
+        //descramble(ba);
         //std::cout << "======" << std::endl;
-        //std::cout << "scrambled:" << std::endl;
-        //printBa(input);
+        //std::cout << "descrambled:" << std::endl;
+        //printBa(ba);
 
         //wrap(ba);
         //std::cout << "======" << std::endl;
         //std::cout << "wrapped:" << std::endl;
         //printBa(input);
 
+
         QByteArray * result = modulator->Modulate(ba);
 
-        std::cout << "result:" << std::endl;
-        printBa(*result);
+        //std::cout << "result:" << std::endl;
+        //printBa(*result);
         m_audioOutputIODevice.close();
         m_audioOutputIODevice.setBuffer(result);
         m_audioOutputIODevice.open(QIODevice::ReadOnly);
 
         QAudioOutput * m_audioOutput = new QAudioOutput(m_device, m_format, this);
         m_audioOutput->start(&m_audioOutputIODevice);
+
     }
 };
 
@@ -169,16 +229,16 @@ int main(int argc, char *argv[])
 
     QByteArray input;
 
-    input.append((char)0xAA);
-    /*
-    input.append((char)0xFF);
-    input.append((char)0x00);
-    input.append((char)0xFF);
+    srand (time(NULL));
 
-    std::cout << "input:" << std::endl;
-    printBa(input);
-    std::cout << "======" << std::endl;
-*/
+
+    for (int i=0;i<30;i++)
+        input.append(char(0x00));
+
+    //std::cout << "input:" << std::endl;
+    //printBa(input);
+    //std::cout << "======" << std::endl;
+
 
     Modem * m = new Modem(1400,2100,0.01);
     m->emitSignal(&input);
